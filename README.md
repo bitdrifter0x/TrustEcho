@@ -2,7 +2,7 @@
 
 A high-performance, full-stack Testimonial Management SaaS engine designed to help businesses collect, manage, and seamlessly embed client reviews into their websites. Built with a decoupled monorepo architecture featuring robust security structures and dynamic multi-environment setups.
 
-🔗 **Live Link:** [https://trust-echo.vercel.app/] 
+🔗 **Live Link:** https://trust-echo.vercel.app/ 
 
 ---
 
@@ -28,6 +28,3 @@ To optimize SaaS delivery, the backend utilizes a dynamic conditional middleware
 Implements individual traffic throttling mechanisms via `express-rate-limit` to defend infrastructure against malicious automated spam:
 * **Submission Limiter:** Restricts new testimonial inputs strictly to **5 requests per hour per IP** to eliminate database flooding.
 * **Widget Limiter:** Protects rendering logic by throttling widget views to a safe **100 views per minute per IP**.
-
-### 3. Decoupled Production Configuration
-The application is entirely zero-hardcoded. Environment layers leverage Vite-specific injection rules (`import.meta.env.VITE_*`) on the client alongside localized Node configurations on the backend, allowing instant configuration changes across staging or production without disrupting build files.
