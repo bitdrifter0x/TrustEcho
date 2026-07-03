@@ -1,0 +1,20 @@
+# Dependency directories
+node_modules/
+
+# Local environment secret variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Operating System system files (avoids committing hidden desktop junk)
+.DS_Store
+Thumbs.db
+
+# Optional: Log files (if your app crashes or generates error dumps later)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
