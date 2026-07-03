@@ -1,6 +1,6 @@
 # TrustEcho 
 
-A high-performance, full-stack Testimonial Management SaaS engine designed to help businesses collect, manage, and seamlessly embed client reviews into their websites. Built with a decoupled monorepo architecture featuring robust security structures and dynamic multi-environment setups.
+A high-performance, full-stack Testimonial Management engine designed to help businesses collect, manage, and seamlessly embed client reviews into their websites. 
 
 🔗 **Live Link:** https://trust-echo.vercel.app/ 
 
