@@ -9,7 +9,7 @@ export default function Widget() {
   useEffect(() => {
     const fetchApprovedTestimonials = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/testimonials/widget/${userId}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials/widget/${userId}`);
         const result = await res.json();
         
         if (res.ok && result.data) {

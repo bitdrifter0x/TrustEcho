@@ -13,7 +13,7 @@ export default function SubmitForm() {
     setStatus({ type: '', message: '' });
 
     try {
-      const res = await fetch('http://localhost:5000/api/testimonials', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, ...formData }),

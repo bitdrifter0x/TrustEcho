@@ -32,9 +32,9 @@ export default function Dashboard() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   const userId = user?.user?._id || '';
-  const formUrl = `http://localhost:5173/submit/${userId}`;
+  const formUrl = `${import.meta.env.VITE_FRONTEND_URL}submit/${userId}`;
   
-  const embedCode = `<div id="trust-echo-widget"></div>\n<script>\n  (function() {\n    fetch("http://localhost:5000/api/testimonials/widget/${userId}")\n      .then(res => res.json())\n      .then(result => {\n        const data = result.data || [];\n        if (data.length === 0) return;\n        const container = document.getElementById("trust-echo-widget");\n        container.style.display = "grid";\n        container.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";\n        container.style.gap = "16px";\n        container.style.padding = "16px";\n        container.innerHTML = data.map(t => \`\n          <div style="background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; font-family: sans-serif; color: #f8fafc; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1)">\n            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px;">\n              <div>\n                <h4 style="margin: 0; font-weight: bold; color: #e2e8f0; font-size: 14px;">\${t.clientName}</h4>\n                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">\${t.clientCompany || 'Verified Customer'}</p>\n              </div>\n              <div style="color: #fbbf24; font-size: 12px;">\${'★'.repeat(t.rating || 5)}</div>\n            </div>\n            <p style="margin: 0; font-size: 13px; color: #94a3b8; font-style: italic; line-height: 1.6;">"\${t.content}"</p>\n            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">\n              <span style="font-size: 10px; font-family: monospace; color: #475569; text-transform: uppercase;">✓ Verified by Trust Echo</span>\n            </div>\n          </div>\n        \`).join('');\n      }).catch(err => console.error("Trust Echo Error:", err));\n  })();\n</script>`;
+  const embedCode = `<div id="trust-echo-widget"></div>\n<script>\n  (function() {\n    fetch("${import.meta.env.VITE_API_URL}/api/testimonials/widget/${userId}")\n      .then(res => res.json())\n      .then(result => {\n        const data = result.data || [];\n        if (data.length === 0) return;\n        const container = document.getElementById("trust-echo-widget");\n        container.style.display = "grid";\n        container.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";\n        container.style.gap = "16px";\n        container.style.padding = "16px";\n        container.innerHTML = data.map(t => \`\n          <div style="background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; font-family: sans-serif; color: #f8fafc; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1)">\n            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px;">\n              <div>\n                <h4 style="margin: 0; font-weight: bold; color: #e2e8f0; font-size: 14px;">\${t.clientName}</h4>\n                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">\${t.clientCompany || 'Verified Customer'}</p>\n              </div>\n              <div style="color: #fbbf24; font-size: 12px;">\${'★'.repeat(t.rating || 5)}</div>\n            </div>\n            <p style="margin: 0; font-size: 13px; color: #94a3b8; font-style: italic; line-height: 1.6;">"\${t.content}"</p>\n            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">\n              <span style="font-size: 10px; font-family: monospace; color: #475569; text-transform: uppercase;">✓ Verified by Trust Echo</span>\n            </div>\n          </div>\n        \`).join('');\n      }).catch(err => console.error("Trust Echo Error:", err));\n  })();\n</script>`;
   const copyEmbed = () => {
     navigator.clipboard.writeText(embedCode);
     setCopiedEmbed(true);
@@ -50,7 +50,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchTestimonials = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/testimonials', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`, {
           headers: { 'Authorization': `Bearer ${user?.token}` }
         });
         const result = await res.json();
@@ -67,7 +67,7 @@ export default function Dashboard() {
 
   const handleToggleApproval = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/testimonials/${id}/approve`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials/${id}/approve`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${user?.token}` }
       });
@@ -81,7 +81,7 @@ export default function Dashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this testimonial permanently?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/testimonials/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user?.token}` }
       });
