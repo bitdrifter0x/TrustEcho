@@ -46,13 +46,12 @@ export default function Widget() {
   }
 
   return (
-    /* Changed from bg-transparent to a forced solid dark background so it never washes out on light sites */
     <div className="bg-[#060A14] min-h-screen w-full font-sans antialiased p-6 text-slate-100 relative z-0">
       
-      {/* Background Ambient Glow */}
+      {/* FIX: Added background gradient styling so the ambient glow div is active and visible */}
       <div 
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 rounded-full pointer-events-none -z-10 opacity-40"
-        style={{  width: '500px', height: '500px' }} 
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 rounded-full pointer-events-none -z-10 opacity-30 blur-3xl"
+        style={{ width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)' }} 
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-7xl mx-auto">
@@ -87,7 +86,7 @@ export default function Widget() {
                 </div>
               </div>
 
-              {/* Core Testimonial Content with explicit high-contrast white/slate text */}
+              {/* Core Testimonial Content */}
               <p className="text-slate-200 text-[14px] leading-relaxed font-normal italic">
                 “{t.content || 'Excellent Product!'}”
               </p>
@@ -95,11 +94,12 @@ export default function Widget() {
 
             {/* Verification Footer Row */}
             <div className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-between">
+              {/* FIX: Updated badge title to reflect verified status accurately */}
               <span className="text-[9px] tracking-widest text-indigo-400 font-bold uppercase inline-flex items-center gap-1 bg-indigo-500/5 px-2 py-1 rounded-md border border-indigo-500/10">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="inline">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                Verified Integrity
+                Verified Review
               </span>
             </div>
           </div>
