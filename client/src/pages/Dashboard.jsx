@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 /* ── SVG Icons matching Home.jsx Design Language ─────────────────── */
@@ -22,6 +22,93 @@ const Stars = ({ count }) => (
   </div>
 );
 
+/* ── Config & helpers ───────────────────────────────────────────── */
+
+// FIX 2 (trailing slash): trailing slashes are stripped, so the URLs work whether or not
+// the .env value ends with "/". The frontend URL falls back to the current site.
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const FRONTEND_URL = (import.meta.env.VITE_FRONTEND_URL || window.location.origin).replace(/\/+$/, '');
+
+// FIX 3 (expired token): one helper for every dashboard API call. If the server answers 401
+// (token invalid or expired), the user is logged out, and ProtectedRoute sends them to /login.
+const apiRequest = async (path, token, onUnauthorized, options = {}) => {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (res.status === 401) {
+    onUnauthorized();
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  const result = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(result.message || 'Request failed');
+  return result;
+};
+
+// FIX 5 (false "Copied!"): the success message is shown only after the browser really copied
+// the text. If clipboard access is blocked or unavailable (for example on plain http),
+// the user is told to copy it manually.
+const copyText = async (text, setCopied) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  } catch {
+    alert('Could not copy automatically. Please select the text and copy it manually.');
+  }
+};
+
+// FIX 1 (stored XSS): builds the embed snippet customers paste into their websites.
+// The old snippet put raw review text into innerHTML, so a malicious review could run
+// JavaScript on every site using the widget. Now every value goes through esc() first,
+// and the star count is forced to a number from 1 to 5.
+// Inside this template, avoid backticks and "${" so the snippet stays plain JavaScript.
+const buildEmbedCode = (widgetUrl) => `<div id="trust-echo-widget"></div>
+<script>
+(function () {
+  // Escape text so reviews are always shown as plain text, never as HTML
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  fetch(${JSON.stringify(widgetUrl)})
+    .then(function (res) { return res.json(); })
+    .then(function (result) {
+      var data = result.data || [];
+      if (data.length === 0) return;
+      var container = document.getElementById("trust-echo-widget");
+      container.style.display = "grid";
+      container.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";
+      container.style.gap = "16px";
+      container.style.padding = "16px";
+      container.innerHTML = data.map(function (t) {
+        var stars = Math.min(5, Math.max(1, Math.round(Number(t.rating)) || 5));
+        return '<div style="background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; font-family: sans-serif; color: #f8fafc; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1)">'
+          + '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px;">'
+          + '<div>'
+          + '<h4 style="margin: 0; font-weight: bold; color: #e2e8f0; font-size: 14px;">' + esc(t.clientName) + '</h4>'
+          + '<p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">' + esc(t.clientCompany || "Verified Customer") + '</p>'
+          + '</div>'
+          + '<div style="color: #fbbf24; font-size: 12px;">' + "★".repeat(stars) + '</div>'
+          + '</div>'
+          + '<p style="margin: 0; font-size: 13px; color: #94a3b8; font-style: italic; line-height: 1.6;">"' + esc(t.content) + '"</p>'
+          + '<div style="margin-top: 16px; display: flex; justify-content: flex-end;">'
+          + '<span style="font-size: 10px; font-family: monospace; color: #475569; text-transform: uppercase;">✓ Verified by Trust Echo</span>'
+          + '</div>'
+          + '</div>';
+      }).join("");
+    })
+    .catch(function (err) { console.error("Trust Echo Error:", err); });
+})();
+</script>`;
+
 /* ── Component ──────────────────────────────────────────────────── */
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -32,29 +119,16 @@ export default function Dashboard() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   const userId = user?.user?._id || '';
-  const formUrl = `${import.meta.env.VITE_FRONTEND_URL}submit/${userId}`;
+  const formUrl = `${FRONTEND_URL}/submit/${userId}`;
   
-  const embedCode = `<div id="trust-echo-widget"></div>\n<script>\n  (function() {\n    fetch("${import.meta.env.VITE_API_URL}/api/testimonials/widget/${userId}")\n      .then(res => res.json())\n      .then(result => {\n        const data = result.data || [];\n        if (data.length === 0) return;\n        const container = document.getElementById("trust-echo-widget");\n        container.style.display = "grid";\n        container.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";\n        container.style.gap = "16px";\n        container.style.padding = "16px";\n        container.innerHTML = data.map(t => \`\n          <div style="background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; font-family: sans-serif; color: #f8fafc; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1)">\n            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px;">\n              <div>\n                <h4 style="margin: 0; font-weight: bold; color: #e2e8f0; font-size: 14px;">\${t.clientName}</h4>\n                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">\${t.clientCompany || 'Verified Customer'}</p>\n              </div>\n              <div style="color: #fbbf24; font-size: 12px;">\${'★'.repeat(t.rating || 5)}</div>\n            </div>\n            <p style="margin: 0; font-size: 13px; color: #94a3b8; font-style: italic; line-height: 1.6;">"\${t.content}"</p>\n            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">\n              <span style="font-size: 10px; font-family: monospace; color: #475569; text-transform: uppercase;">✓ Verified by Trust Echo</span>\n            </div>\n          </div>\n        \`).join('');\n      }).catch(err => console.error("Trust Echo Error:", err));\n  })();\n</script>`;
-  const copyEmbed = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopiedEmbed(true);
-    setTimeout(() => setCopiedEmbed(false), 2000);
-  };
-
-  const copyFormLink = () => {
-    navigator.clipboard.writeText(formUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
+  const embedCode = buildEmbedCode(`${API_URL}/api/testimonials/widget/${userId}`);
+  const copyEmbed = () => copyText(embedCode, setCopiedEmbed);
+  const copyFormLink = () => copyText(formUrl, setCopiedLink);
 
   useEffect(() => {
     const fetchTestimonials = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`, {
-          headers: { 'Authorization': `Bearer ${user?.token}` }
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.message || 'Failed to fetch');
+        const result = await apiRequest('/api/testimonials', user.token, logout);
         setTestimonials(result.data || []);
       } catch (err) {
         setError(err.message);
@@ -62,16 +136,18 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-    if (user?.token) fetchTestimonials();
-  }, [user]);
+    // FIX 4 (endless "Loading..."): a stored login without a token (for example a corrupted
+    // localStorage entry) can never load data, so log out and let ProtectedRoute show /login.
+    if (!user?.token) {
+      logout();
+      return;
+    }
+    fetchTestimonials();
+  }, [user, logout]);
 
   const handleToggleApproval = async (id) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials/${id}/approve`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${user?.token}` }
-      });
-      if (!res.ok) throw new Error('Failed to update status');
+      await apiRequest(`/api/testimonials/${id}/approve`, user.token, logout, { method: 'PATCH' });
       setTestimonials(prev => prev.map(t => t._id === id ? { ...t, isApproved: !t.isApproved } : t));
     } catch (err) {
       alert(err.message);
@@ -81,11 +157,7 @@ export default function Dashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this testimonial permanently?')) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${user?.token}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete');
+      await apiRequest(`/api/testimonials/${id}`, user.token, logout, { method: 'DELETE' });
       setTestimonials(prev => prev.filter(t => t._id !== id));
     } catch (err) {
       alert(err.message);
@@ -115,7 +187,7 @@ export default function Dashboard() {
             </div>
             <button 
               onClick={logout} 
-              className="text-xs font-semibold text-slate-400 bg-white/0.04 border border-slate-800 px-4 py-2 rounded-xl hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all"
+              className="text-xs font-semibold text-slate-400 bg-white/[0.04] border border-slate-800 px-4 py-2 rounded-xl hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all"
             >
               Logout
             </button>
@@ -144,7 +216,7 @@ export default function Dashboard() {
             </div>
             <button 
               onClick={copyFormLink} 
-              className="mt-5 inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-300 bg-white/0.04 border border-slate-800 py-3 px-4 rounded-xl hover:bg-white/[0.07] transition-colors"
+              className="mt-5 inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-300 bg-white/[0.04] border border-slate-800 py-3 px-4 rounded-xl hover:bg-white/[0.07] transition-colors"
             >
               <CopyIcon /> {copiedLink ? 'Link Copied! ✓' : 'Copy Collection Link'}
             </button>

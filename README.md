@@ -11,7 +11,7 @@ A high-performance, full-stack Testimonial Management engine designed to help bu
 - **Frontend:** React (Vite), Tailwind CSS, Single Page Application (SPA) architecture, deployed globally via **Vercel**.
 - **Backend:** Node.js, Express.js, RESTful API architecture, deployed via automated pipelines on **Render**.
 - **Database:** MongoDB Atlas (Mongoose ODM) with optimized relational structures for performance.
-- **Security & Optimization:** JSON Web Tokens (JWT), Cryptographic Cookie-Parser, and Context-Aware Origin Isolation.
+- **Security & Optimization:** JSON Web Tokens (JWT) via Authorization Headers, Helmet security headers, and Context-Aware Origin Isolation.
 
 ---
 
@@ -22,7 +22,7 @@ Rather than just a basic CRUD app, this platform implements industry-standard pr
 ### 1. Advanced Context-Aware CORS Middleware
 To optimize SaaS delivery, the backend utilizes a dynamic conditional middleware layer:
 * **Public Route Delivery:** Routes fetching embedded widgets (`/api/testimonials/widget/*`) and public submission routes bypass static constraints, serving dynamic content via a global wildcard access pattern (`*`).
-* **Dashboard Protection:** Private dashboard actions are rigidly locked down using explicit, dynamically loaded origins (`process.env.CLIENT_URL`) with full credential passing enabled to prevent cross-origin exploits.
+* **Dashboard Protection:** Private dashboard actions are rigidly locked down using explicit, dynamically loaded origins (`process.env.CLIENT_URL`) to prevent cross-origin exploits.
 
 ### 2. Multi-Layered Rate Limiting & API Protection
 Implements individual traffic throttling mechanisms via `express-rate-limit` to defend infrastructure against malicious automated spam:

@@ -3,26 +3,43 @@ import { useParams } from 'react-router-dom';
 
 export default function SubmitForm() {
   const { userId } = useParams(); // Grabs the target user ID directly from the URL
-  const [formData, setFormData] = useState({ clientName: '', clientEmail: '', clientCompany: '', content: '', rating: 5 });
+  const [formData, setFormData] = useState({ 
+    clientName: '', 
+    clientEmail: '', 
+    clientCompany: '', 
+    content: '', 
+    rating: 5,
+    website: '' // FIX: Hidden honeypot field to trap automated bot submissions
+  });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // FIX: If the hidden honeypot field is filled out, silently block/fake success
+    if (formData.website) {
+      setStatus({ type: 'success', message: 'Thank you! Your testimonial has been submitted successfully.' });
+      return;
+    }
+
     setSubmitting(true);
     setStatus({ type: '', message: '' });
 
     try {
+      // Strip out the honeypot before sending to the backend
+      const { website, ...payload } = formData;
+
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...formData }),
+        body: JSON.stringify({ userId, ...payload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Submission failed');
 
       setStatus({ type: 'success', message: 'Thank you! Your testimonial has been submitted successfully.' });
-      setFormData({ clientName: '', clientEmail: '', clientCompany: '', content: '', rating: 5 });
+      setFormData({ clientName: '', clientEmail: '', clientCompany: '', content: '', rating: 5, website: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     } finally {
@@ -31,7 +48,8 @@ export default function SubmitForm() {
   };
 
   return (
-    <div className="max-h-screen bg-[#060A14] flex flex-col items-center justify-center text-slate-100 font-sans overflow-x-hidden px-4 py-16 relative">
+    // FIX: Changed max-h-screen to min-h-screen to prevent layout bugs/clipping on smaller viewports
+    <div className="min-h-screen bg-[#060A14] flex flex-col items-center justify-center text-slate-100 font-sans overflow-x-hidden px-4 py-16 relative">
       
       {/* Background Ambient Glow */}
       <div 
@@ -71,12 +89,27 @@ export default function SubmitForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* FIX: Honeypot trap field (hidden from real users, attractive to bots) */}
+            <div className="hidden" aria-hidden="true">
+              <label htmlFor="website">Website</label>
+              <input 
+                type="text" 
+                id="website"
+                name="website" 
+                tabIndex="-1" 
+                autoComplete="off"
+                value={formData.website} 
+                onChange={e => setFormData({ ...formData, website: e.target.value })} 
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Your Name</label>
                 <input 
                   type="text" 
                   required 
+                  maxLength={50}
                   className="w-full bg-[#060A14] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500/60 transition-colors placeholder-slate-700" 
                   placeholder="Jane Smith" 
                   value={formData.clientName} 
@@ -88,6 +121,7 @@ export default function SubmitForm() {
                 <input 
                   type="email" 
                   required 
+                  maxLength={254}
                   className="w-full bg-[#060A14] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500/60 transition-colors placeholder-slate-700" 
                   placeholder="jane@example.com" 
                   value={formData.clientEmail} 
@@ -102,6 +136,7 @@ export default function SubmitForm() {
               </label>
               <input 
                 type="text" 
+                maxLength={100}
                 className="w-full bg-[#060A14] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500/60 transition-colors placeholder-slate-700" 
                 placeholder="CTO at TechCorp" 
                 value={formData.clientCompany} 
@@ -134,6 +169,7 @@ export default function SubmitForm() {
               <textarea 
                 required 
                 rows="4" 
+                maxLength={1000}
                 className="w-full bg-[#060A14] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500/60 transition-colors placeholder-slate-700 resize-none leading-relaxed" 
                 placeholder="Share your experience working with us, what went well, and what you achieved..." 
                 value={formData.content} 
