@@ -1,34 +1,50 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+// FIX 4 (wrong status codes): errors carry their own HTTP status. The global error
+// handler in server.js reads `err.statusCode`, so a bad token now returns 401, not 500.
+const httpError = (message, statusCode) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+};
+
 export const protect = async (req, res, next) => {
-    let token;
+    const authHeader = req.headers.authorization;
 
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        try {
-            // Get token from header (removes 'Bearer ' part)
-            token = req.headers.authorization.split(' ')[1];
-
-            // Verify token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-
-            // DATABASE TEMPORARY BYPASS LOGIC (If DB isn't ready)
-            if (User.db.readyState !== 1) {
-                req.user = { _id: decoded.id, name: "Mock User" };
-                return next();
-            }
-
-            // Real Production Logic: Get user from the token database
-            req.user = await User.findById(decoded.id).select('-password');
-            next();
-        } catch (error) {
-            res.status(401);
-            return next(new Error('Not authorized, token failed'));
-        }
+    // Require an "Authorization: Bearer <token>" header.
+    // The space after "Bearer" is intentional, so "BearerXYZ" is not accepted.
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return next(httpError('Not authorized, no token provided', 401));
     }
 
-    if (!token) {
-        res.status(401);
-        return next(new Error('Not authorized, no token provided'));
+    const token = authHeader.split(' ')[1];
+
+    // FIX 2 (fallback secret): removed `|| 'fallback_secret'`. If JWT_SECRET is missing,
+    // refuse every request instead of checking tokens against a secret that is public on GitHub.
+    if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET is not set');
+        return next(httpError('Server configuration error', 500));
     }
+
+    // Only the token check is inside try/catch, so a database problem later on is not
+    // wrongly reported as "token failed".
+    let decoded;
+    try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+        return next(httpError('Not authorized, token failed', 401));
+    }
+
+    // FIX 1 (mock-user bypass): removed. The user is always loaded from the real database.
+    const user = await User.findById(decoded.id).select('-password');
+
+    // FIX 3 (deleted user): a valid token for a user who no longer exists gets a clean 401,
+    // instead of letting req.user be null and crashing the controllers later.
+    if (!user) {
+        return next(httpError('Not authorized, user no longer exists', 401));
+    }
+
+    req.user = user;
+    next();
 };
